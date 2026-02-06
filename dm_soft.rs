@@ -64,7 +64,14 @@ impl DmSoft {
     }
 
     /// BindWindow
-    pub fn bind_window(&mut self, hwnd: u64, display: &str, mouse: &str, keypad: &str, mode: u32) -> Result<bool> {
+    pub fn bind_window(
+        &mut self,
+        hwnd: u64,
+        display: &str,
+        mouse: &str,
+        keypad: &str,
+        mode: u32,
+    ) -> Result<bool> {
         let payload = json!({"hwnd": hwnd, "display": display, "mouse": mouse, "keypad": keypad, "mode": mode});
         let v = self.send_task("BindWindow", &payload);
         log::debug!("bind_window:{payload:?},回复:{v:?}");
