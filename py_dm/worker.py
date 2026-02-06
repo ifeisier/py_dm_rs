@@ -23,6 +23,18 @@ def handle_cmd(task_id, name, payload):
     result = 0
     if name == "SetPath":
         result = dm.SetPath(payload["path"])
+    elif name == "KeyPress":
+        result = dm.KeyPress(payload["vk_code"])
+    elif name == "KeyPressStr":
+        result = dm.KeyPressStr(payload["key_str"], payload["delay"])
+    elif name == "BindWindow":
+        result = dm.BindWindow(payload["hwnd"], payload["display"], payload["mouse"], payload["keypad"], payload["mode"])
+    elif name == "EnumWindow":
+        result = dm.EnumWindow(payload["parent"], payload["class"], payload["title"], payload["filter"])
+    elif name == "FindWindowEx":
+        result = dm.FindWindowEx(payload["parent"], payload["class"], payload["title"])
+    elif name == "FindWindow":
+        result = dm.FindWindow(payload["class"], payload["title"])
     elif name == "Reg":
         result = dm.Reg(payload["code"], payload["ver"])
     elif name == "MoveTo":

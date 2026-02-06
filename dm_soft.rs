@@ -47,23 +47,66 @@ pub struct DmSoft {
 }
 #[allow(dead_code)]
 impl DmSoft {
+    /// KeyPress
+    pub fn key_press(&mut self, vk_code: u32) -> Result<bool> {
+        let payload = json!({"vk_code": vk_code});
+        let v = self.send_task("KeyPress", &payload);
+        log::debug!("key_press:{payload:?},回复:{v:?}");
+        self.to_bool(v)
+    }
+
+    /// KeyPressStr
+    pub fn key_press_str(&mut self, key_str: &str, delay: u32) -> Result<bool> {
+        let payload = json!({"key_str": key_str, "delay": delay});
+        let v = self.send_task("KeyPressStr", &payload);
+        log::debug!("key_press_str:{payload:?},回复:{v:?}");
+        self.to_bool(v)
+    }
+
+    /// BindWindow
+    pub fn bind_window(&mut self, hwnd: u64, display: &str, mouse: &str, keypad: &str, mode: u32) -> Result<bool> {
+        let payload = json!({"hwnd": hwnd, "display": display, "mouse": mouse, "keypad": keypad, "mode": mode});
+        let v = self.send_task("BindWindow", &payload);
+        log::debug!("bind_window:{payload:?},回复:{v:?}");
+        self.to_bool(v)
+    }
+
+    /// EnumWindow
+    pub fn enum_window(
+        &mut self,
+        parent: u64,
+        class: &str,
+        title: &str,
+        filter: u32,
+    ) -> Result<Vec<u64>> {
+        let payload = json!({"parent": parent, "class": class, "title": title, "filter": filter});
+        let v = self.send_task("EnumWindow", &payload);
+        log::debug!("enum_window:{payload:?},回复:{v:?}");
+        self.to_vec_u64(v)
+    }
+
+    /// FindWindowEx
+    pub fn find_window_ex(&mut self, parent: u64, class: &str, title: &str) -> Result<u64> {
+        let payload = json!({"parent": parent, "class": class, "title": title});
+        let v = self.send_task("FindWindowEx", &payload);
+        log::debug!("find_window_ex:{payload:?},回复:{v:?}");
+        self.to_u64(v)
+    }
+
+    /// FindWindow
+    pub fn find_window(&mut self, class: &str, title: &str) -> Result<u64> {
+        let payload = json!({"class": class, "title": title});
+        let v = self.send_task("FindWindow", &payload);
+        log::debug!("find_window:{payload:?},回复:{v:?}");
+        self.to_u64(v)
+    }
+
     /// SetPath
     pub fn set_path(&mut self, path: &str) -> Result<bool> {
         let payload = json!({"path": path});
         let v = self.send_task("SetPath", &payload);
         log::debug!("set_path:{payload:?},回复:{v:?}");
-
-        let v = v?;
-        let status = Extract::get_str(&v, "status")?;
-        if status == "error" {
-            let msg = Extract::get_str(&v, "msg")?;
-            bail!(msg.to_string())
-        }
-        Ok(if Extract::get_u64(&v, "result")? == 1 {
-            true
-        } else {
-            false
-        })
+        self.to_bool(v)
     }
 
     /// Reg
@@ -71,14 +114,7 @@ impl DmSoft {
         let payload = json!({"code": code, "ver": ver});
         let v = self.send_task("Reg", &payload);
         log::debug!("reg:{payload:?},回复:{v:?}");
-
-        let v = v?;
-        let status = Extract::get_str(&v, "status")?;
-        if status == "error" {
-            let msg = Extract::get_str(&v, "msg")?;
-            bail!(msg.to_string())
-        }
-        Ok(Extract::get_u64(&v, "result")?)
+        self.to_u64(v)
     }
 
     /// MoveTo
@@ -86,18 +122,7 @@ impl DmSoft {
         let payload = json!({"x": p.x, "y": p.y});
         let v = self.send_task("MoveTo", &payload);
         log::debug!("move_to:{payload:?},回复:{v:?}");
-
-        let v = v?;
-        let status = Extract::get_str(&v, "status")?;
-        if status == "error" {
-            let msg = Extract::get_str(&v, "msg")?;
-            bail!(msg.to_string())
-        }
-        Ok(if Extract::get_u64(&v, "result")? == 1 {
-            true
-        } else {
-            false
-        })
+        self.to_bool(v)
     }
 
     /// LeftClick
@@ -105,18 +130,7 @@ impl DmSoft {
         let payload = json!({});
         let v = self.send_task("LeftClick", &payload);
         log::debug!("left_click:{payload:?},回复:{v:?}");
-
-        let v = v?;
-        let status = Extract::get_str(&v, "status")?;
-        if status == "error" {
-            let msg = Extract::get_str(&v, "msg")?;
-            bail!(msg.to_string())
-        }
-        Ok(if Extract::get_u64(&v, "result")? == 1 {
-            true
-        } else {
-            false
-        })
+        self.to_bool(v)
     }
 
     /// FindPic.
@@ -243,5 +257,49 @@ impl DmSoft {
             })?;
 
         Ok(DmSoft { child, id_index: 0 })
+    }
+
+    /// 将输出返回结果转成 Vec<u64>.
+    fn to_vec_u64(&self, v: Result<Value>) -> Result<Vec<u64>> {
+        let v = v?;
+        let status = Extract::get_str(&v, "status")?;
+        if status == "error" {
+            let msg = Extract::get_str(&v, "msg")?;
+            bail!(msg.to_string())
+        }
+
+        let result = Extract::get_str(&v, "result")?;
+        let nums: Vec<u64> = result
+            .split(',')
+            .filter(|s| !s.is_empty())
+            .map(|s| s.parse::<u64>())
+            .collect::<Result<_, _>>()?;
+        Ok(nums)
+    }
+
+    /// 将输出返回结果转成 u64.
+    fn to_u64(&self, v: Result<Value>) -> Result<u64> {
+        let v = v?;
+        let status = Extract::get_str(&v, "status")?;
+        if status == "error" {
+            let msg = Extract::get_str(&v, "msg")?;
+            bail!(msg.to_string())
+        }
+        Ok(Extract::get_u64(&v, "result")?)
+    }
+
+    /// 将输出返回结果转成 bool.
+    fn to_bool(&self, v: Result<Value>) -> Result<bool> {
+        let v = v?;
+        let status = Extract::get_str(&v, "status")?;
+        if status == "error" {
+            let msg = Extract::get_str(&v, "msg")?;
+            bail!(msg.to_string())
+        }
+        Ok(if Extract::get_u64(&v, "result")? == 1 {
+            true
+        } else {
+            false
+        })
     }
 }
